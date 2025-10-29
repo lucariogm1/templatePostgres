@@ -410,7 +410,7 @@ stage("descripción Jira"){
 
      stage('Crear ticket en Jira') {
             when {
-                expression { params.ENVIRONMENT == 'productivo' }
+                expression { params.ENVIRONMENT == 'Produccion' }
                 }
             steps {
                 script {
