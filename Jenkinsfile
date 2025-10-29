@@ -13,9 +13,12 @@ pipeline {
         DB_USER_ADMIN         = 'postgres'
         PAIS                  = 'PE'
         
-        // VARIABLES DE JIRA
+        // VARIABLES DE JIRA Y WEBHOOK
         JIRA_API_URL = 'https://bancoripley1.atlassian.net/rest/api/3/issue/'
         TEAMS_WEBHOOK = 'https://accenture.webhook.office.com/webhookb2/8fb63984-6f5f-4c2a-a6d3-b4fce2feb8ee@e0793d39-0939-496d-b129-198edd916feb/IncomingWebhook/334818fae3a84ae484512967d1d3f4f1/b08cc148-e951-496b-9f46-3f7e35f79570/V27mobtZgWmAzxIvjHCY5CMAFKPZptkEnQbT5z7X84QNQ1'
+        PROYECT_JIRA = "AJI"
+        TITULO_JIRA = "Creación de Instancia base de datos PostgreSQL"
+        ID_ISSUETYPE_JIRA = "14898"
     }
 
     parameters {
@@ -354,6 +357,114 @@ stage('Validar y Transicionar Ticket Jira') {
                             '${TEAMS_WEBHOOK}'
                     """
 
+                }
+            }
+        }
+
+stage("descripción Jira"){
+            steps{
+                script{
+
+                    def notificationText = """
+                    Pais : ${env.PAIS}
+                    Instancia: ${params.DB_INSTANCE_NAME ?: 'N/A'}
+                    Ambiente: ${params.ENVIRONMENT}
+                    Proyecto GCP: ${params.PROJECT_ID}
+                    Región/Zona: ${params.REGION} / ${params.ZONE}
+
+                    Base de datos:
+                    - Nombre: ${params.DB_ENGINE}
+                    - Versión: ${params.DB_VERSION}
+                    - Usuario: ${params.DB_USERNAME}
+                    - Máx conexiones: ${params.DB_MAX_CONNECTIONS}
+
+                    Recursos:
+                    - Máquina: ${params.MACHINE_TYPE}
+                    - Almacenamiento: ${params.DB_STORAGE_SIZE} GB (${params.DB_STORAGE_TYPE})
+                    - Auto-resize: ${params.DB_STORAGE_AUTO_RESIZE}
+
+                    Red y acceso:
+                    - VPC/Subnet: ${params.DB_VPC_NETWORK} / ${params.DB_SUBNET}
+                    - IP Privada: ${params.DB_PRIVATE_IP_ENABLED}
+                    - Acceso Público: ${params.DB_PUBLIC_ACCESS_ENABLED}
+
+                    Seguridad:
+                    - Encriptación: ${params.DB_ENCRYPTION_ENABLED}
+                    - Protección eliminación: ${params.DB_DELETION_PROTECTION}
+                    - IAM Role: ${params.DB_IAM_ROLE}
+
+                    Backup / Mantenimiento:
+                    - Retención (días): ${params.DB_BACKUP_RETENTION_DAYS}
+                    - Backup start: ${params.DB_BACKUP_START_TIME}
+                    - Ventana mantenimiento: ${params.DB_MAINTENANCE_WINDOW_DAY} ${params.DB_MAINTENANCE_WINDOW_HOUR}
+
+                    Alta disponibilidad / Monitoreo:
+                    - BACKUP Habilitado: ${params.DB_BACKUP_ENABLED}
+                    - Monitoring: ${params.DB_MONITORING_ENABLED}
+                    """
+
+                    env.mensaje = notificationText
+                }
+            }
+        }
+
+     stage('Crear ticket en Jira') {
+            when {
+                expression { params.ENVIRONMENT == 'productivo' }
+                }
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'JIRA_TOKEN', usernameVariable: 'JIRA_USER', passwordVariable: 'JIRA_API_TOKEN')]) {
+                        def auth = "${JIRA_USER}:${JIRA_API_TOKEN}".bytes.encodeBase64().toString()
+
+                        // Construir el payload como mapa
+
+                        def payloadMap = [
+                            fields: [
+                                project: [ key: env.PROYECT_JIRA ],
+                                summary: env.TITULO_JIRA,
+                                description: [
+                                    type: "doc",
+                                    version: 1,
+                                    content: [
+                                        [
+                                            type: "paragraph",
+                                            content: 
+                                            [
+                                                [ 
+                                                    type: "text", text: env.mensaje ?: "Descripción no disponible" 
+                                                ],                                    
+                                                [
+                                                    type: "text",
+                                                    text: "Ver Build",
+                                                    marks: [
+                                                        [ type: "link", attrs: [ href: "${env.BUILD_URL}" ] ]
+                                                    ]
+                                                ]
+
+                                            ]
+                                        ]
+                                    ],
+
+                                ],
+                                issuetype: [ id: env.ID_ISSUETYPE_JIRA ]
+                            ]
+                        ]
+                        // Convertir a JSON válido
+                        def payloadJson = groovy.json.JsonOutput.toJson(payloadMap)
+                        echo "${payloadJson}"
+                        def response = sh(
+                            script: """
+                            curl -s -X POST "${JIRA_API_URL}" \\
+                                -H "Authorization: Basic ${auth}" \\
+                                -H "Content-Type: application/json" \\
+                                -d '${payloadJson}'
+                            """,
+                            returnStdout: true
+                        ).trim()
+
+                        echo "Comentario enviado: ${response}"
+                    }
                 }
             }
         }
