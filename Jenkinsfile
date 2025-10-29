@@ -77,14 +77,14 @@ pipeline {
                     env.DB_BACKUP_ENABLED = params.DB_BACKUP_ENABLED
                     echo "Valor inicial de DB_BACKUP_ENABLED (seleccionado por usuario): ${env.DB_BACKUP_ENABLED}"
 
-                    if (params.ENVIRONMENT == '3-Produccion') {
+                    if (params.ENVIRONMENT == 'Produccion') {
                         if (env.DB_BACKUP_ENABLED == 'false') {
                             echo "ADVERTENCIA: Ambiente de Producción detectado. Se forzará DB_BACKUP_ENABLED a 'true'."
                             env.DB_BACKUP_ENABLED = 'true'
                         } else {
                             echo "Validación OK: Ambiente de Producción. DB_BACKUP_ENABLED ya está en 'true'."
                         }
-                    } else if (params.ENVIRONMENT.startsWith('1-') || params.ENVIRONMENT.startsWith('2-')) {
+                    } else if (params.ENVIRONMENT == 'Desarrollo' || params.ENVIRONMENT == 'Pre-productivo (PP)') {
                         echo "Ambiente de Desarrollo/Pre-productivo. Se respeta el valor de DB_BACKUP_ENABLED: ${env.DB_BACKUP_ENABLED}"
                     } else {
                         error("ERROR CRÍTICO: Ambiente de despliegue no válido: ${params.ENVIRONMENT}")
