@@ -11,14 +11,10 @@ pipeline {
         DB_TAGS               = 'test'
         DB_TIME_ZONE          = 'GMT-4'
         DB_USER_ADMIN         = 'postgres'
-        // DB_BACKUP_ENABLED se inicializa aquí pero será sobreescrito por el parámetro en el primer script stage.
-        //DB_BACKUP_ENABLED     = 'true' 
         PAIS                  = 'PE'
         
         // VARIABLES DE JIRA
         JIRA_API_URL = 'https://bancoripley1.atlassian.net/rest/api/3/issue/'
-
-        mensajeAteams = 'Despliegue de DB iniciado.'
     }
 
     parameters {
@@ -28,7 +24,7 @@ pipeline {
         string(name: 'PROJECT_ID', defaultValue: '', description: 'ID del proyecto')
         string(name: 'REGION',      defaultValue: '', description: 'Región')
         string(name: 'ZONE',        defaultValue: '', description: 'Zona')
-        choice(name: 'ENVIRONMENT', choices: ['1-Desarrollo', '2-Pre-productivo (PP)', '3-Produccion'], description: 'Ambiente') // Etiqueta clave: '3-Produccion'
+        choice(name: 'ENVIRONMENT', choices: ['Desarrollo', 'Pre-productivo (PP)', 'Produccion'], description: 'Ambiente') // Etiqueta clave: '3-Produccion'
 
         // TYPE / INSTANCIA
         string(name: 'DB_INSTANCE_NAME', defaultValue: '', description: 'Nombre instancia')
@@ -51,7 +47,6 @@ pipeline {
         choice(name: 'DB_IP_RANGE_ALLOWED',      choices: ['true', 'false'], description: 'Rangos permitidos')
 
         // SEGURIDAD / OPERACIÓN
-        // Movido de environment a parameters para que el usuario pueda elegir
         choice(name: 'DB_BACKUP_ENABLED', choices: ['true', 'false'], description: 'Habilitar Backup (Obligatorio en Prod)') 
         string(name: 'DB_BACKUP_START_TIME',      defaultValue: '', description: 'Hora inicio backup (HH:MM)')
         string(name: 'DB_BACKUP_RETENTION_DAYS', defaultValue: '', description: 'Retención (días)')
@@ -78,12 +73,9 @@ pipeline {
                 script {
                     echo "Validando el ambiente: ${params.ENVIRONMENT}"
 
-                    // 1. Inicializar env.DB_BACKUP_ENABLED con el valor seleccionado por el usuario.
                     env.DB_BACKUP_ENABLED = params.DB_BACKUP_ENABLED
                     echo "Valor inicial de DB_BACKUP_ENABLED (seleccionado por usuario): ${env.DB_BACKUP_ENABLED}"
 
-                    // 2. Aplicar regla de Producción
-                    // La etiqueta '3-Produccion' indica el ambiente productivo.
                     if (params.ENVIRONMENT == '3-Produccion') {
                         if (env.DB_BACKUP_ENABLED == 'false') {
                             echo "ADVERTENCIA: Ambiente de Producción detectado. Se forzará DB_BACKUP_ENABLED a 'true'."
@@ -94,7 +86,6 @@ pipeline {
                     } else if (params.ENVIRONMENT.startsWith('1-') || params.ENVIRONMENT.startsWith('2-')) {
                         echo "Ambiente de Desarrollo/Pre-productivo. Se respeta el valor de DB_BACKUP_ENABLED: ${env.DB_BACKUP_ENABLED}"
                     } else {
-                        // Por si el ENVIRONMENT no coincide con las opciones esperadas, aunque sea choice.
                         error("ERROR CRÍTICO: Ambiente de despliegue no válido: ${params.ENVIRONMENT}")
                     }
                 }
@@ -172,68 +163,206 @@ pipeline {
 //          }
 //      }
 
-    stage('Notify Teams') {
-        steps {
-            script {
-                // Notar que la variable teamsWebhookUrl está hardcodeada. En un entorno real se usaría una Credencial ID
-                def teamsWebhookUrl = 'https://accenture.webhook.office.com/webhookb2/8fb63984-6f5f-4c2a-a6d3-b4fce2feb8ee@e0793d39-0939-496d-b129-198edd916feb/IncomingWebhook/334818fae3a84ae484512967d1d3f4f1/b08cc148-e951-496b-9f46-3f7e35f79570/V27mobtZgWmAzxIvjHCY5CMAFKPZptkEnQbT5z7X84QNQ1'
-                def jsonFile = "teams-notification.json"
-                
-                // 1. Construcción del mensaje Teams con formato Markdown
-                // El valor de env.DB_BACKUP_ENABLED usado aquí será el valor validado/forzado del stage anterior.
-                def notificationText = """
-**Pipeline ejecutado**
-
-**Detalles de la Instancia:**
-* **Instancia DB:** ${params.DB_INSTANCE_NAME}
-* **Ambiente:** ${params.ENVIRONMENT}
-* **Tipo de Servicio:** ${env.DB_SERVICE_PROVIDER}
-
-**Configuración de Backup:**
-* **Backup Habilitado:** ${env.DB_BACKUP_ENABLED}
-
-**Enlace de la Build:** [Ver Build en Jenkins](${env.BUILD_URL})
-"""
-
-                // 2. Definición del JSON payload inyectando la variable 'notificationText'
-                // Reemplazamos saltos de línea y comillas dobles para que el JSON sea válido en el archivo.
-                def escapedText = notificationText.replaceAll("\\n", "\\\\n").replaceAll('"', '\\"')
-                
-                def message = """
-{
-    "@type": "MessageCard",
-    "@context": "http://schema.org/extensions",
-    "summary": "Notificación de Jenkins - ${params.DB_INSTANCE_NAME}",
-    "themeColor": "0076D7",
-    "title": "Pipeline de Despliegue de Base de Datos",
-    "text": "${escapedText}"
-}
-"""
-                
-                // 3. Escribir el payload en un archivo temporal
-                writeFile file: jsonFile, text: message
-
-                // 4. Usar el comando 'curl' para enviar el archivo
-                try {
-                    sh """
-                        curl -s -X POST -H 'Content-Type: application/json' --data @${jsonFile} ${teamsWebhookUrl}
-                    """
-                    echo 'Notificación enviada a Teams exitosamente usando curl.'
-                } catch (Exception e) {
-                    echo "ADVERTENCIA: Falló el envío de notificación a Teams (Error: ${e.getMessage()}). Se continúa con el pipeline."
-                } finally {
-                    // 5. Limpiar el archivo temporal
-                    sh "rm ${jsonFile}"
+stage('Validar y Transicionar Ticket Jira') {
+            steps {
+                script {
+                    withCredentials([usernamePassword(credentialsId: 'JIRA_TOKEN', usernameVariable: 'JIRA_USER', passwordVariable: 'JIRA_API_TOKEN')]) {
+ 
+                        echo "Consultando estado actual del ticket ${TICKET_JIRA}..."
+ 
+                        def estado = sh(
+                            script: """bash -c '
+                                curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" \
+                                -X GET "${JIRA_API_URL}${TICKET_JIRA}" \
+                                -H "Accept: application/json" \
+                                | jq -r ".fields.status.name // \\"Desconocido\\""
+                            '""",
+                            returnStdout: true
+                        ).trim()
+ 
+                        echo " Estado actual: ${estado}"
+ 
+                        // IDs de transición Jira
+                        def transiciones = [
+                            "Tareas por hacer": "31" // directo a Done
+                        ]
+ 
+                        if (estado == "Tareas por hacer") {
+                            def transitionId = transiciones[estado]
+                            def mensajeTeams = "Ticket ${TICKET_JIRA} cambió automáticamente de 'Tareas por hacer' a 'Finalizado (Done)'."
+                            def mensajeJira = "El ticket ${TICKET_JIRA} fue cerrado automáticamente por ejecución del pipeline."
+ 
+                            echo "Transicionando ticket ${TICKET_JIRA} a 'Done'..."
+ 
+                            // Realizar transición
+                            def payloadTrans = groovy.json.JsonOutput.toJson([transition: [id: transitionId]])
+                            writeFile file: 'transicion.json', text: payloadTrans
+                            sh """curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" \
+                                 -X POST -H "Content-Type: application/json" \
+                                 --data @transicion.json \
+                                 "${JIRA_API_URL}${TICKET_JIRA}/transitions" """
+ 
+                            // Agregar comentario en Jira
+                            def comentario = groovy.json.JsonOutput.toJson([
+                                body: [
+                                    type: "doc",
+                                    version: 1,
+                                    content: [[
+                                        type: "paragraph",
+                                        content: [[type: "text", text: mensajeJira]]
+                                    ]]
+                                ]
+                            ])
+                            writeFile file: 'comentario.json', text: comentario
+                            sh """curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" \
+                                 -X POST -H "Content-Type: application/json" \
+                                 --data @comentario.json \
+                                 "${JIRA_API_URL}${TICKET_JIRA}/comment" """
+ 
+                            // Notificación Teams
+                            def payloadTeams = groovy.json.JsonOutput.toJson([text: mensajeTeams])
+                            writeFile file: 'teams_ok.json', text: payloadTeams
+                            sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_ok.json ${TEAMS_WEBHOOK}"
+ 
+                        } else {
+                            def mensajeError = "Ticket ${TICKET_JIRA} no puede ejecutarse. Estado actual: '${estado}'. Solo se permite si está en 'Tareas por hacer'."
+                            echo mensajeError
+ 
+                            // Comentario Jira
+                            def comentarioError = groovy.json.JsonOutput.toJson([
+                                body: [
+                                    type: "doc",
+                                    version: 1,
+                                    content: [[
+                                        type: "paragraph",
+                                        content: [[type: "text", text: mensajeError]]
+                                    ]]
+                                ]
+                            ])
+                            writeFile file: 'comentario_error.json', text: comentarioError
+                            sh """curl -s -u "$JIRA_USER:$JIRA_API_TOKEN" \
+                                 -X POST -H "Content-Type: application/json" \
+                                 --data @comentario_error.json \
+                                 "${JIRA_API_URL}${TICKET_JIRA}/comment" """
+ 
+                            // Notificación Teams
+                            def payloadError = groovy.json.JsonOutput.toJson([text: mensajeError])
+                            writeFile file: 'teams_error.json', text: payloadError
+                            sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_error.json ${TEAMS_WEBHOOK}"
+ 
+                            error("Pipeline detenido: estado no permitido.")
+                        }
+                    }
                 }
             }
         }
-    }
+ 
+        stage('Notificar a Teams') {
+            steps {
+                script {
+                    def mensaje = "Pipeline completado para ticket ${TICKET_JIRA}."
+                    def payloadTeams = groovy.json.JsonOutput.toJson([text: mensaje])
+                    writeFile file: 'teams_final.json', text: payloadTeams
+                    sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_final.json ${TEAMS_WEBHOOK}"
+                }
+            }
+        }
+    
+
+        stage("Mensaje para teams"){
+            steps{
+                script{
+                    def sectionMessage = """ 
+                    "sections": [{
+                    "activityTitle": "Nueva Instancia PostgreSQL en Proceso de Creación",
+                    "activitySubtitle": "Ticket Jira: ${params.TICKET_JIRA}",
+                    "facts": [
+                        {
+                            "name": "Pais",
+                            "value": "${env.PAIS}"
+                        },
+                        {
+                            "name": "Ambiente",
+                            "value": "${params.ENVIRONMENT}"
+                        },
+                        {
+                            "name": "Base de Datos",
+                            "value": "${params.DB_ENGINE} (${params.DB_VERSION})"
+                        },
+                        {
+                            "name": "Proyecto GCP",
+                            "value": "${params.PROJECT_ID}"
+                        },
+                        {
+                            "name": "Nombre de la instacia",
+                            "value": "${params.DB_INSTANCE_NAME}"
+                        },
+                        {
+                            "name": "Región/Zona",
+                            "value": "${params.REGION}/${params.ZONE}"
+                        },
+                        {
+                            "name": "Tipo de Máquina",
+                            "value": "${params.MACHINE_TYPE}"
+                        },
+                        {
+                            "name": "Almacenamiento",
+                            "value": "${params.DB_STORAGE_SIZE} GB (${params.DB_STORAGE_TYPE})"
+                        },
+                        {
+                            "name": "Backup",
+                            "value": "${params.DB_BACKUP_ENABLED}"
+                        }
+                    ],
+                    "markdown": true
+                }],
+                "potentialAction": [
+                    {
+                        "@type": "OpenUri",
+                        "name": "Ver Build",
+                        "targets": [
+                            {
+                                "os": "default",
+                                "uri": "${env.BUILD_URL}"
+                            }
+                        ]
+                    }
+                ]
+
+                """
+                    env.mensajeTeams = sectionMessage
+                }
+            }
+        }
+
+        stage('Notify Teams') {
+            steps {
+                script {
+
+                def teamsWebhookUrl = 'https://accenture.webhook.office.com/webhookb2/8fb63984-6f5f-4c2a-a6d3-b4fce2feb8ee@e0793d39-0939-496d-b129-198edd916feb/IncomingWebhook/334818fae3a84ae484512967d1d3f4f1/b08cc148-e951-496b-9f46-3f7e35f79570/V27mobtZgWmAzxIvjHCY5CMAFKPZptkEnQbT5z7X84QNQ1'
+
+                def message = """
+                {
+                    "@type": "MessageCard",
+                    "@context": "http://schema.org/extensions",
+                    "summary": "Nueva Instancia PostgreSQL en Creación",
+                    ${mensajeTeams}
+                }
+                """
+                sh """
+                    curl -H 'Content-Type: application/json' \
+                            -d '${message}' \
+                            '${teamsWebhookUrl}'
+                    """
+
+                }
+            }
+        }
 
     stage('Imprimir variables por sección') {
       steps {
         script {
           // --- Sección: Ocultas (environment)
-          // El valor de DB_BACKUP_ENABLED en esta sección reflejará el cambio si se hizo en Producción.
           def ocultas = [
             DB_BACKUP_ENABLED     : env.DB_BACKUP_ENABLED,
             DB_ENGINE             : env.DB_ENGINE,
