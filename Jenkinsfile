@@ -317,7 +317,6 @@ Instancia de base de datos creada con los siguientes detalles:"""
                 summary: "Nueva Instancia ${env.DB_ENGINE}",
                 themeColor: "0076D7",
                 sections: [[
-                    activityTitle: "Nueva Instancia ${env.DB_ENGINE} Creada",
                     activitySubtitle: "Ticket Jira: ${params.TICKET_JIRA}",
                     facts: facts,
                     markdown: true
