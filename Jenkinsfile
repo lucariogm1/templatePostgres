@@ -9,7 +9,7 @@ pipeline {
         DB_RESOURCE_LABELS    = 'test'
         DB_SERVICE_PROVIDER   = 'GCP - Cloud SQL'
         DB_TAGS               = 'test'
-        DB_TIME_ZONE          = 'GMT-4'
+        DB_TIME_ZONE          = 'GMT-5'
         DB_USER_ADMIN         = 'postgres'
         PAIS                  = 'PE'
         
@@ -474,7 +474,6 @@ stage("descripción Jira"){
         script {
           // --- Sección: Ocultas (environment)
           def ocultas = [
-            DB_BACKUP_ENABLED     : env.DB_BACKUP_ENABLED,
             DB_ENGINE             : env.DB_ENGINE,
             DB_PASSWORD_ADMIN     : env.DB_PASSWORD_ADMIN,
             DB_PLATFORM_PASS      : env.DB_PLATFORM_PASS,
@@ -521,7 +520,7 @@ stage("descripción Jira"){
 
           // --- Sección: Seguridad / Operación
           def segOp = [
-            DB_BACKUP_ENABLED            : params.DB_BACKUP_ENABLED, // Ahora es un parámetro
+            DB_BACKUP_ENABLED            : params.DB_BACKUP_ENABLED,
             CHECK_DELETE                 : params.CHECK_DELETE,
             CREDENTIAL_FILE              : params.CREDENTIAL_FILE,
             DB_AUDIT_LOGS_ENABLED        : params.DB_AUDIT_LOGS_ENABLED,
