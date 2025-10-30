@@ -15,7 +15,7 @@ pipeline {
         
         // VARIABLES DE JIRA Y WEBHOOK
         JIRA_API_URL = 'https://bancoripley1.atlassian.net/rest/api/3/issue/'
-        TEAMS_WEBHOOK = 'https://accenture.webhook.office.com/webhookb2/870e2ab9-53bf-43f6-8655-376cbe11bd1c@e0793d39-0939-496d-b129-198edd916feb/IncomingWebhook/f495e4cf395c416e83eae4fb3b9069fd/b08cc148-e951-496b-9f46-3f7e35f79570/V2r0-VttaFGsrZXpm8qS18JcqaHZ26SxRAT51CZvkTR-A1'
+        TEAMS_WEBHOOK = 'https://accenture.webhook.office.com/webhookb2/8fb63984-6f5f-4c2a-a6d3-b4fce2feb8ee@e0793d39-0939-496d-b129-198edd916feb/IncomingWebhook/334818fae3a84ae484512967d1d3f4f1/b08cc148-e951-496b-9f46-3f7e35f79570/V27mobtZgWmAzxIvjHCY5CMAFKPZptkEnQbT5z7X84QNQ1'
         PROYECT_JIRA = "AJI"
         TITULO_JIRA = "Creación de Instancia base de datos PostgreSQL"
         ID_ISSUETYPE_JIRA = "14898"
