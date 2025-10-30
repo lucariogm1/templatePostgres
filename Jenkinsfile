@@ -95,77 +95,100 @@ pipeline {
                 }
             }
         }
+
+    stage('Imprimir variables por sección') {
+      steps {
+        script {
+          // --- Sección: Ocultas (environment)
+          def ocultas = [
+            DB_ENGINE             : env.DB_ENGINE,
+            DB_PASSWORD_ADMIN     : env.DB_PASSWORD_ADMIN,
+            DB_PLATFORM_PASS      : env.DB_PLATFORM_PASS,
+            DB_PLATFORM_USER      : env.DB_PLATFORM_USER,
+            DB_RESOURCE_LABELS    : env.DB_RESOURCE_LABELS,
+            DB_SERVICE_PROVIDER   : env.DB_SERVICE_PROVIDER,
+            DB_TAGS               : env.DB_TAGS,
+            DB_TIME_ZONE          : env.DB_TIME_ZONE,
+            DB_USER_ADMIN         : env.DB_USER_ADMIN,
+            PAIS                  : env.PAIS
+          ]
+
+          // --- Sección: GCP
+          def gcp = [
+            ENVIRONMENT : params.ENVIRONMENT,
+            PROJECT_ID  : params.PROJECT_ID,
+            REGION      : params.REGION,
+            ZONE        : params.ZONE
+          ]
+
+          // --- Sección: Type / Instancia
+          def typeInst = [
+            DB_AVAILABILITY_TYPE : params.DB_AVAILABILITY_TYPE,
+            DB_INSTANCE_ID       : params.DB_INSTANCE_ID,
+            DB_INSTANCE_NAME     : params.DB_INSTANCE_NAME,
+            DB_MAX_CONNECTIONS   : params.DB_MAX_CONNECTIONS,
+            DB_PASSWORD          : params.DB_PASSWORD,
+            DB_STORAGE_AUTO_RESIZE: params.DB_STORAGE_AUTO_RESIZE,
+            DB_STORAGE_SIZE      : params.DB_STORAGE_SIZE,
+            DB_STORAGE_TYPE      : params.DB_STORAGE_TYPE,
+            DB_USERNAME          : params.DB_USERNAME,
+            DB_VERSION           : params.DB_VERSION,
+            MACHINE_TYPE         : params.MACHINE_TYPE
+          ]
+
+          // --- Sección: Redes
+          def redes = [
+            DB_IP_RANGE_ALLOWED      : params.DB_IP_RANGE_ALLOWED,
+            DB_PRIVATE_IP_ENABLED    : params.DB_PRIVATE_IP_ENABLED,
+            DB_PUBLIC_ACCESS_ENABLED : params.DB_PUBLIC_ACCESS_ENABLED,
+            DB_SUBNET                : params.DB_SUBNET,
+            DB_VPC_NETWORK           : params.DB_VPC_NETWORK
+          ]
+
+          // --- Sección: Seguridad / Operación
+          def segOp = [
+            DB_BACKUP_ENABLED            : params.DB_BACKUP_ENABLED,
+            CHECK_DELETE                 : params.CHECK_DELETE,
+            CREDENTIAL_FILE              : params.CREDENTIAL_FILE,
+            DB_AUDIT_LOGS_ENABLED        : params.DB_AUDIT_LOGS_ENABLED,
+            DB_BACKUP_RETENTION_DAYS     : params.DB_BACKUP_RETENTION_DAYS,
+            DB_BACKUP_START_TIME         : params.DB_BACKUP_START_TIME,
+            DB_DELETION_PROTECTION       : params.DB_DELETION_PROTECTION,
+            DB_ENCRYPTION_ENABLED        : params.DB_ENCRYPTION_ENABLED,
+            DB_IAM_ROLE                  : params.DB_IAM_ROLE,
+            DB_MAINTENANCE_WINDOW_DAY    : params.DB_MAINTENANCE_WINDOW_DAY,
+            DB_MAINTENANCE_WINDOW_HOUR   : params.DB_MAINTENANCE_WINDOW_HOUR,
+            DB_MONITORING_ENABLED        : params.DB_MONITORING_ENABLED,
+            ENABLE_CACHE                 : params.ENABLE_CACHE
+          ]
+
+          // --- Sección: Replica / Failover
+          def replica = [
+            DB_FAILOVER_REPLICA_ENABLED: params.DB_FAILOVER_REPLICA_ENABLED,
+            DB_READ_REPLICA_ENABLED    : params.DB_READ_REPLICA_ENABLED
+          ]
+
+          // Helper CPS-safe para imprimir ordenado
+          def printSection = { String titulo, Map m ->
+            echo "================= ${titulo} ================="
+            def keys = m.keySet().toList(); keys.sort()
+            for (k in keys) {
+              def v = m[k]
+              echo "${k}: ${v == null ? '' : v}"
+            }
+          }
+
+          printSection('DEFAULT (Ocultas)', ocultas)
+          printSection('GCP', gcp)
+          printSection('TYPE / INSTANCIA', typeInst)
+          printSection('REDES', redes)
+          printSection('SEGURIDAD / OPERACIÓN', segOp)
+          printSection('REPLICA / FAILOVER', replica)
+        }
+      }
+    }
+  }
         
-//          stage('Post-Jira Status') {
-//          steps {
-//
-//              script {
-//                  def TICKET_JIRA = params.TICKET_JIRA
-//                  def JIRA_API_URL_FULL = "${env.JIRA_API_URL}${TICKET_JIRA}"
-//
-//
-//                  withCredentials([usernamePassword(credentialsId: 'JIRA_TOKEN', usernameVariable: 'JIRA_USER', passwordVariable: 'JIRA_API_TOKEN')]) {
-//                      def auth = java.util.Base64.encoder.encodeToString("${JIRA_USER}:${JIRA_API_TOKEN}".getBytes("UTF-8"))
-//                      def response = sh(
-//                          script: """
-//                              curl -s -X GET "${JIRA_API_URL_FULL}" \
-//                              -H "Authorization: Basic ${auth}" \
-//                              -H "Accept: application/json"
-//                          """,
-//                          returnStdout: true
-//                      ).trim()
-//
-//                      def json = new groovy.json.JsonSlurper().parseText(response)
-//                      def estado = json.fields.status.name
-//                      echo "Estado actual del ticket\n ${JIRA_API_URL_FULL}: ${estado}"
-//                  }
-//
-//
-//              }
-//
-//          }
-//      }
-//      
-//      stage('Post-Coment-jira'){
-//          steps{
-//              script{
-//
-//                  withCredentials([usernamePassword(credentialsId: 'JIRA_TOKEN', usernameVariable: 'JIRA_USER', passwordVariable: 'JIRA_API_TOKEN')]) {
-//                      def auth = java.util.Base64.encoder.encodeToString("${JIRA_USER}:${JIRA_API_TOKEN}".getBytes("UTF-8"))
-//                      def comentario = "Este ticket fue comentario por Vinka (¿Funcionó?)"
-//
-//                      def response = sh(
-//                          script: """
-//                              curl -s -X POST "${JIRA_API_URL}${params.TICKET_JIRA}/comment" \
-//                              -H "Authorization: Basic ${auth}" \
-//                              -H "Content-Type: application/json" \
-//                              -d '{
-//                                      "body": {
-//                                          "type": "doc",
-//                                          "version": 1,
-//                                          "content": [
-//                                          {
-//                                              "type": "paragraph",
-//                                               "content": [
-//                                               {
-//                                                   "type": "text",
-//                                                   "text": "${comentario}"
-//                                               }
-//                                               ]
-//                                           }
-//                                          ]
-//                                      }
-//                                      }'
-//                          """,
-//                          returnStdout: true
-//                      ).trim()
-//
-//                      echo "Comentario enviado: ${response}"
-//                  }
-//
-//              }
-//          }
-//      }
 
 stage('Validar y Transicionar Ticket Jira') {
             steps {
@@ -226,7 +249,7 @@ stage('Validar y Transicionar Ticket Jira') {
                             // Notificación Teams
                             def payloadTeams = groovy.json.JsonOutput.toJson([text: mensajeTeams])
                             writeFile file: 'teams_ok.json', text: payloadTeams
-                            sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_ok.json ${TEAMS_WEBHOOK}"
+                            // sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_ok.json ${TEAMS_WEBHOOK}"
  
                         } else {
                             def mensajeError = "Ticket ${TICKET_JIRA} no puede ejecutarse. Estado actual: '${estado}'. Solo se permite si está en 'Tareas por hacer'."
@@ -261,16 +284,7 @@ stage('Validar y Transicionar Ticket Jira') {
             }
         }
  
-        stage('Notificar a Teams') {
-            steps {
-                script {
-                    def mensaje = "Pipeline completado para ticket ${TICKET_JIRA}."
-                    def payloadTeams = groovy.json.JsonOutput.toJson([text: mensaje])
-                    writeFile file: 'teams_final.json', text: payloadTeams
-                    sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_final.json ${TEAMS_WEBHOOK}"
-                }
-            }
-        }
+
     
 
         stage("Mensaje para teams"){
@@ -334,29 +348,19 @@ stage('Validar y Transicionar Ticket Jira') {
                 ]
 
                 """
-                    env.mensajeTeams = sectionMessage
+                    def payloadTeams = groovy.json.JsonOutput.toJson([text: sectionMessage])
+                    writeFile file: 'teams_ok.json', text: payloadTeams
                 }
             }
         }
 
-        stage('Notify Teams') {
+        stage('Notificar a Teams') {
             steps {
                 script {
-
-                def message = """
-                {
-                    "@type": "MessageCard",
-                    "@context": "http://schema.org/extensions",
-                    "summary": "Nueva Instancia PostgreSQL en Creación",
-                    ${mensajeTeams}
-                }
-                """
-                sh """
-                    curl -H 'Content-Type: application/json' \
-                            -d '${message}' \
-                            '${TEAMS_WEBHOOK}'
-                    """
-
+                    def mensaje = "Pipeline completado para ticket ${TICKET_JIRA}."
+                    def payloadTeams = groovy.json.JsonOutput.toJson([text: mensaje])
+                    writeFile file: 'teams_final.json', text: payloadTeams
+                    sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_final.json ${TEAMS_WEBHOOK}"
                 }
             }
         }
@@ -469,98 +473,7 @@ stage("descripción Jira"){
             }
         }
 
-    stage('Imprimir variables por sección') {
-      steps {
-        script {
-          // --- Sección: Ocultas (environment)
-          def ocultas = [
-            DB_ENGINE             : env.DB_ENGINE,
-            DB_PASSWORD_ADMIN     : env.DB_PASSWORD_ADMIN,
-            DB_PLATFORM_PASS      : env.DB_PLATFORM_PASS,
-            DB_PLATFORM_USER      : env.DB_PLATFORM_USER,
-            DB_RESOURCE_LABELS    : env.DB_RESOURCE_LABELS,
-            DB_SERVICE_PROVIDER   : env.DB_SERVICE_PROVIDER,
-            DB_TAGS               : env.DB_TAGS,
-            DB_TIME_ZONE          : env.DB_TIME_ZONE,
-            DB_USER_ADMIN         : env.DB_USER_ADMIN,
-            PAIS                  : env.PAIS
-          ]
-
-          // --- Sección: GCP
-          def gcp = [
-            ENVIRONMENT : params.ENVIRONMENT,
-            PROJECT_ID  : params.PROJECT_ID,
-            REGION      : params.REGION,
-            ZONE        : params.ZONE
-          ]
-
-          // --- Sección: Type / Instancia
-          def typeInst = [
-            DB_AVAILABILITY_TYPE : params.DB_AVAILABILITY_TYPE,
-            DB_INSTANCE_ID       : params.DB_INSTANCE_ID,
-            DB_INSTANCE_NAME     : params.DB_INSTANCE_NAME,
-            DB_MAX_CONNECTIONS   : params.DB_MAX_CONNECTIONS,
-            DB_PASSWORD          : params.DB_PASSWORD,
-            DB_STORAGE_AUTO_RESIZE: params.DB_STORAGE_AUTO_RESIZE,
-            DB_STORAGE_SIZE      : params.DB_STORAGE_SIZE,
-            DB_STORAGE_TYPE      : params.DB_STORAGE_TYPE,
-            DB_USERNAME          : params.DB_USERNAME,
-            DB_VERSION           : params.DB_VERSION,
-            MACHINE_TYPE         : params.MACHINE_TYPE
-          ]
-
-          // --- Sección: Redes
-          def redes = [
-            DB_IP_RANGE_ALLOWED      : params.DB_IP_RANGE_ALLOWED,
-            DB_PRIVATE_IP_ENABLED    : params.DB_PRIVATE_IP_ENABLED,
-            DB_PUBLIC_ACCESS_ENABLED : params.DB_PUBLIC_ACCESS_ENABLED,
-            DB_SUBNET                : params.DB_SUBNET,
-            DB_VPC_NETWORK           : params.DB_VPC_NETWORK
-          ]
-
-          // --- Sección: Seguridad / Operación
-          def segOp = [
-            DB_BACKUP_ENABLED            : params.DB_BACKUP_ENABLED,
-            CHECK_DELETE                 : params.CHECK_DELETE,
-            CREDENTIAL_FILE              : params.CREDENTIAL_FILE,
-            DB_AUDIT_LOGS_ENABLED        : params.DB_AUDIT_LOGS_ENABLED,
-            DB_BACKUP_RETENTION_DAYS     : params.DB_BACKUP_RETENTION_DAYS,
-            DB_BACKUP_START_TIME         : params.DB_BACKUP_START_TIME,
-            DB_DELETION_PROTECTION       : params.DB_DELETION_PROTECTION,
-            DB_ENCRYPTION_ENABLED        : params.DB_ENCRYPTION_ENABLED,
-            DB_IAM_ROLE                  : params.DB_IAM_ROLE,
-            DB_MAINTENANCE_WINDOW_DAY    : params.DB_MAINTENANCE_WINDOW_DAY,
-            DB_MAINTENANCE_WINDOW_HOUR   : params.DB_MAINTENANCE_WINDOW_HOUR,
-            DB_MONITORING_ENABLED        : params.DB_MONITORING_ENABLED,
-            ENABLE_CACHE                 : params.ENABLE_CACHE
-          ]
-
-          // --- Sección: Replica / Failover
-          def replica = [
-            DB_FAILOVER_REPLICA_ENABLED: params.DB_FAILOVER_REPLICA_ENABLED,
-            DB_READ_REPLICA_ENABLED    : params.DB_READ_REPLICA_ENABLED
-          ]
-
-          // Helper CPS-safe para imprimir ordenado
-          def printSection = { String titulo, Map m ->
-            echo "================= ${titulo} ================="
-            def keys = m.keySet().toList(); keys.sort()
-            for (k in keys) {
-              def v = m[k]
-              echo "${k}: ${v == null ? '' : v}"
-            }
-          }
-
-          printSection('DEFAULT (Ocultas)', ocultas)
-          printSection('GCP', gcp)
-          printSection('TYPE / INSTANCIA', typeInst)
-          printSection('REDES', redes)
-          printSection('SEGURIDAD / OPERACIÓN', segOp)
-          printSection('REPLICA / FAILOVER', replica)
-        }
-      }
-    }
-  }
+  
 
     post {
         success { echo 'Pipeline ejecutado correctamente.' }
