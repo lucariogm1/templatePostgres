@@ -277,62 +277,66 @@ stages {
         }
         
         stage('Notificar a Teams') {
-            steps {
-                script {
-                    // Verificar si ya estaba en Done
-                    if (env.ESTADO_TICKET in ["Done", "Finalizado"]) {
-                        def mensajeError = "El ticket ${TICKET_JIRA} ya estaba '${env.ESTADO_TICKET}'. No se realizó nueva transición ni despliegue."
-                        echo mensajeError
-        
-                        def payloadError = groovy.json.JsonOutput.toJson([text: mensajeError])
-                        writeFile file: 'teams_error.json', text: payloadError
-                        sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_error.json ${TEAMS_WEBHOOK}"
-        
-                        error("Pipeline detenido: ticket ya finalizado.")
-                    }
-        
-                    // Si todo fue correcto, enviar mensaje unificado a Teams
-                    def mensajeTeams = """Ticket ${TICKET_JIRA} cambió automáticamente de 'Tareas por hacer' a 'Finalizado (Done)'.
+    steps {
+        script {
+            // Verificar si ya estaba en Done
+            if (env.ESTADO_TICKET in ["Done", "Finalizado"]) {
+                def mensajeError = "El ticket ${TICKET_JIRA} ya estaba '${env.ESTADO_TICKET}'. No se realizó nueva transición ni despliegue."
+                echo mensajeError
+
+                def payloadError = groovy.json.JsonOutput.toJson([ text: mensajeError ])
+                writeFile file: 'teams_error.json', text: payloadError
+                sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_error.json ${TEAMS_WEBHOOK}"
+
+                error("Pipeline detenido: ticket ya finalizado.")
+            }
+
+            // Mensaje con saltos de línea reales (JsonOutput se encargará de escapar)
+            def mensajeTeams = """Ticket ${TICKET_JIRA} cambió automáticamente de 'Tareas por hacer' a 'Finalizado (Done)'.
 
 Pipeline completado correctamente.
 
 Instancia de base de datos creada con los siguientes detalles:"""
 
-        
-                    def sectionMessage = """
-                    {
-                        "text": "${mensajeTeams}",
-                        "sections": [{
-                            "activityTitle": "Nueva Instancia ${env.DB_ENGINE} Creada",
-                            "activitySubtitle": "Ticket Jira: ${params.TICKET_JIRA}",
-                            "facts": [
-                                { "name": "Pais", "value": "${env.PAIS}" },
-                                { "name": "Ambiente", "value": "${params.ENVIRONMENT}" },
-                                { "name": "Base de Datos", "value": "${env.DB_ENGINE} (${params.DB_VERSION})" },
-                                { "name": "Proyecto GCP", "value": "${params.PROJECT_ID}" },
-                                { "name": "Nombre de la instancia", "value": "${params.DB_INSTANCE_NAME}" },
-                                { "name": "Región/Zona", "value": "${params.REGION}/${params.ZONE}" },
-                                { "name": "Tipo de Máquina", "value": "${params.MACHINE_TYPE}" },
-                                { "name": "Almacenamiento", "value": "${params.DB_STORAGE_SIZE} GB (${params.DB_STORAGE_TYPE})" },
-                                { "name": "Backup", "value": "${params.DB_BACKUP_ENABLED}" }
-                            ],
-                            "markdown": true
-                        }],
-                        "potentialAction": [{
-                            "@type": "OpenUri",
-                            "name": "Ver Build",
-                            "targets": [{ "os": "default", "uri": "${env.BUILD_URL}" }]
-                        }]
-                    }
-                    """
-        
-                    writeFile file: 'teams_final.json', text: sectionMessage
-                    sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_final.json ${TEAMS_WEBHOOK}"
-        
-                    echo "Notificación enviada a Teams con éxito."
-                }
-            }
+            def facts = [
+                [ name: "Pais", value: env.PAIS ?: "" ],
+                [ name: "Ambiente", value: params.ENVIRONMENT ?: "" ],
+                [ name: "Base de Datos", value: "${params.DB_ENGINE} (${params.DB_VERSION})".toString() ],
+                [ name: "Proyecto GCP", value: params.PROJECT_ID ?: "" ],
+                [ name: "Nombre de la instancia", value: params.DB_INSTANCE_NAME ?: "" ],
+                [ name: "Región/Zona", value: "${params.REGION}/${params.ZONE}" ],
+                [ name: "Tipo de Máquina", value: params.MACHINE_TYPE ?: "" ],
+                [ name: "Almacenamiento", value: "${params.DB_STORAGE_SIZE} GB (${params.DB_STORAGE_TYPE})" ],
+                [ name: "Backup", value: params.DB_BACKUP_ENABLED ?: "" ]
+            ]
+
+            def card = [
+                '@type': 'MessageCard',
+                '@context': 'http://schema.org/extensions',
+                text: mensajeTeams,
+                summary: "Nueva Instancia ${env.DB_ENGINE}",
+                themeColor: "0076D7",
+                sections: [[
+                    activityTitle: "Nueva Instancia ${env.DB_ENGINE} Creada",
+                    activitySubtitle: "Ticket Jira: ${params.TICKET_JIRA}",
+                    facts: facts,
+                    markdown: true
+                ]],
+                potentialAction: [[
+                    '@type': "OpenUri",
+                    name: "Ver Build",
+                    targets: [[ os: "default", uri: env.BUILD_URL ?: "" ]]
+                ]]
+            ]
+
+            def payload = groovy.json.JsonOutput.toJson(card)
+            writeFile file: 'teams_final.json', text: payload
+            sh "curl -s -X POST -H 'Content-Type: application/json' --data @teams_final.json ${TEAMS_WEBHOOK}"
+
+            echo "Notificación enviada a Teams con éxito."
         }
+    }
+}
 
         stage("descripción Jira"){
             steps{
