@@ -269,7 +269,7 @@ stages {
                             --data @comentario_error.json \
                             "${JIRA_API_URL}${TICKET_JIRA}/comment" """
         
-                            error("Pipeline detenido: estado no permitido.")
+                            error("Error: El estado del ticket ${TICKET_JIRA} no permitido.")
                         }
                     }
                 }
