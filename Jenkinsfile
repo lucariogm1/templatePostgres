@@ -96,101 +96,101 @@ pipeline {
             }
         }
 
-    stage('Imprimir variables por sección') {
-      steps {
-        script {
-          // --- Sección: Ocultas (environment)
-          def ocultas = [
-            DB_ENGINE             : env.DB_ENGINE,
-            DB_PASSWORD_ADMIN     : env.DB_PASSWORD_ADMIN,
-            DB_PLATFORM_PASS      : env.DB_PLATFORM_PASS,
-            DB_PLATFORM_USER      : env.DB_PLATFORM_USER,
-            DB_RESOURCE_LABELS    : env.DB_RESOURCE_LABELS,
-            DB_SERVICE_PROVIDER   : env.DB_SERVICE_PROVIDER,
-            DB_TAGS               : env.DB_TAGS,
-            DB_TIME_ZONE          : env.DB_TIME_ZONE,
-            DB_USER_ADMIN         : env.DB_USER_ADMIN,
-            PAIS                  : env.PAIS
-          ]
+        stage('Imprimir variables por sección') {
+            steps {
+                script {
+                    // --- Sección: Ocultas (environment)
+                    def ocultas = [
+                        DB_ENGINE             : env.DB_ENGINE,
+                        DB_PASSWORD_ADMIN     : env.DB_PASSWORD_ADMIN,
+                        DB_PLATFORM_PASS      : env.DB_PLATFORM_PASS,
+                        DB_PLATFORM_USER      : env.DB_PLATFORM_USER,
+                        DB_RESOURCE_LABELS    : env.DB_RESOURCE_LABELS,
+                        DB_SERVICE_PROVIDER   : env.DB_SERVICE_PROVIDER,
+                        DB_TAGS               : env.DB_TAGS,
+                        DB_TIME_ZONE          : env.DB_TIME_ZONE,
+                        DB_USER_ADMIN         : env.DB_USER_ADMIN,
+                        PAIS                  : env.PAIS
+                    ]
 
-          // --- Sección: GCP
-          def gcp = [
-            ENVIRONMENT : params.ENVIRONMENT,
-            PROJECT_ID  : params.PROJECT_ID,
-            REGION      : params.REGION,
-            ZONE        : params.ZONE
-          ]
+                    // --- Sección: GCP
+                    def gcp = [
+                        ENVIRONMENT : params.ENVIRONMENT,
+                        PROJECT_ID  : params.PROJECT_ID,
+                        REGION      : params.REGION,
+                        ZONE        : params.ZONE
+                    ]
 
-          // --- Sección: Type / Instancia
-          def typeInst = [
-            DB_AVAILABILITY_TYPE : params.DB_AVAILABILITY_TYPE,
-            DB_INSTANCE_ID       : params.DB_INSTANCE_ID,
-            DB_INSTANCE_NAME     : params.DB_INSTANCE_NAME,
-            DB_MAX_CONNECTIONS   : params.DB_MAX_CONNECTIONS,
-            DB_PASSWORD          : params.DB_PASSWORD,
-            DB_STORAGE_AUTO_RESIZE: params.DB_STORAGE_AUTO_RESIZE,
-            DB_STORAGE_SIZE      : params.DB_STORAGE_SIZE,
-            DB_STORAGE_TYPE      : params.DB_STORAGE_TYPE,
-            DB_USERNAME          : params.DB_USERNAME,
-            DB_VERSION           : params.DB_VERSION,
-            MACHINE_TYPE         : params.MACHINE_TYPE
-          ]
+                    // --- Sección: Type / Instancia
+                    def typeInst = [
+                        DB_AVAILABILITY_TYPE : params.DB_AVAILABILITY_TYPE,
+                        DB_INSTANCE_ID       : params.DB_INSTANCE_ID,
+                        DB_INSTANCE_NAME     : params.DB_INSTANCE_NAME,
+                        DB_MAX_CONNECTIONS   : params.DB_MAX_CONNECTIONS,
+                        DB_PASSWORD          : params.DB_PASSWORD,
+                        DB_STORAGE_AUTO_RESIZE: params.DB_STORAGE_AUTO_RESIZE,
+                        DB_STORAGE_SIZE      : params.DB_STORAGE_SIZE,
+                        DB_STORAGE_TYPE      : params.DB_STORAGE_TYPE,
+                        DB_USERNAME          : params.DB_USERNAME,
+                        DB_VERSION           : params.DB_VERSION,
+                        MACHINE_TYPE         : params.MACHINE_TYPE
+                    ]
 
-          // --- Sección: Redes
-          def redes = [
-            DB_IP_RANGE_ALLOWED      : params.DB_IP_RANGE_ALLOWED,
-            DB_PRIVATE_IP_ENABLED    : params.DB_PRIVATE_IP_ENABLED,
-            DB_PUBLIC_ACCESS_ENABLED : params.DB_PUBLIC_ACCESS_ENABLED,
-            DB_SUBNET                : params.DB_SUBNET,
-            DB_VPC_NETWORK           : params.DB_VPC_NETWORK
-          ]
+                    // --- Sección: Redes
+                    def redes = [
+                        DB_IP_RANGE_ALLOWED      : params.DB_IP_RANGE_ALLOWED,
+                        DB_PRIVATE_IP_ENABLED    : params.DB_PRIVATE_IP_ENABLED,
+                        DB_PUBLIC_ACCESS_ENABLED : params.DB_PUBLIC_ACCESS_ENABLED,
+                        DB_SUBNET                : params.DB_SUBNET,
+                        DB_VPC_NETWORK           : params.DB_VPC_NETWORK
+                    ]
 
-          // --- Sección: Seguridad / Operación
-          def segOp = [
-            DB_BACKUP_ENABLED            : params.DB_BACKUP_ENABLED,
-            CHECK_DELETE                 : params.CHECK_DELETE,
-            CREDENTIAL_FILE              : params.CREDENTIAL_FILE,
-            DB_AUDIT_LOGS_ENABLED        : params.DB_AUDIT_LOGS_ENABLED,
-            DB_BACKUP_RETENTION_DAYS     : params.DB_BACKUP_RETENTION_DAYS,
-            DB_BACKUP_START_TIME         : params.DB_BACKUP_START_TIME,
-            DB_DELETION_PROTECTION       : params.DB_DELETION_PROTECTION,
-            DB_ENCRYPTION_ENABLED        : params.DB_ENCRYPTION_ENABLED,
-            DB_IAM_ROLE                  : params.DB_IAM_ROLE,
-            DB_MAINTENANCE_WINDOW_DAY    : params.DB_MAINTENANCE_WINDOW_DAY,
-            DB_MAINTENANCE_WINDOW_HOUR   : params.DB_MAINTENANCE_WINDOW_HOUR,
-            DB_MONITORING_ENABLED        : params.DB_MONITORING_ENABLED,
-            ENABLE_CACHE                 : params.ENABLE_CACHE
-          ]
+                    // --- Sección: Seguridad / Operación
+                    def segOp = [
+                        DB_BACKUP_ENABLED            : params.DB_BACKUP_ENABLED,
+                        CHECK_DELETE                 : params.CHECK_DELETE,
+                        CREDENTIAL_FILE              : params.CREDENTIAL_FILE,
+                        DB_AUDIT_LOGS_ENABLED        : params.DB_AUDIT_LOGS_ENABLED,
+                        DB_BACKUP_RETENTION_DAYS     : params.DB_BACKUP_RETENTION_DAYS,
+                        DB_BACKUP_START_TIME         : params.DB_BACKUP_START_TIME,
+                        DB_DELETION_PROTECTION       : params.DB_DELETION_PROTECTION,
+                        DB_ENCRYPTION_ENABLED        : params.DB_ENCRYPTION_ENABLED,
+                        DB_IAM_ROLE                  : params.DB_IAM_ROLE,
+                        DB_MAINTENANCE_WINDOW_DAY    : params.DB_MAINTENANCE_WINDOW_DAY,
+                        DB_MAINTENANCE_WINDOW_HOUR   : params.DB_MAINTENANCE_WINDOW_HOUR,
+                        DB_MONITORING_ENABLED        : params.DB_MONITORING_ENABLED,
+                        ENABLE_CACHE                 : params.ENABLE_CACHE
+                    ]
 
-          // --- Sección: Replica / Failover
-          def replica = [
-            DB_FAILOVER_REPLICA_ENABLED: params.DB_FAILOVER_REPLICA_ENABLED,
-            DB_READ_REPLICA_ENABLED    : params.DB_READ_REPLICA_ENABLED
-          ]
+                    // --- Sección: Replica / Failover
+                    def replica = [
+                        DB_FAILOVER_REPLICA_ENABLED: params.DB_FAILOVER_REPLICA_ENABLED,
+                        DB_READ_REPLICA_ENABLED    : params.DB_READ_REPLICA_ENABLED
+                    ]
 
-          // Helper CPS-safe para imprimir ordenado
-          def printSection = { String titulo, Map m ->
-            echo "================= ${titulo} ================="
-            def keys = m.keySet().toList(); keys.sort()
-            for (k in keys) {
-              def v = m[k]
-              echo "${k}: ${v == null ? '' : v}"
+                    // Helper CPS-safe para imprimir ordenado
+                    def printSection = { String titulo, Map m ->
+                        echo "================= ${titulo} ================="
+                        def keys = m.keySet().toList(); keys.sort()
+                        for (k in keys) {
+                        def v = m[k]
+                        echo "${k}: ${v == null ? '' : v}"
+                        }
+                    }
+
+                    printSection('DEFAULT (Ocultas)', ocultas)
+                    printSection('GCP', gcp)
+                    printSection('TYPE / INSTANCIA', typeInst)
+                    printSection('REDES', redes)
+                    printSection('SEGURIDAD / OPERACIÓN', segOp)
+                    printSection('REPLICA / FAILOVER', replica)
+                }
             }
-          }
-
-          printSection('DEFAULT (Ocultas)', ocultas)
-          printSection('GCP', gcp)
-          printSection('TYPE / INSTANCIA', typeInst)
-          printSection('REDES', redes)
-          printSection('SEGURIDAD / OPERACIÓN', segOp)
-          printSection('REPLICA / FAILOVER', replica)
         }
-      }
-    }
-  }
+  
         
 
-stage('Validar y Transicionar Ticket Jira') {
+        stage('Validar y Transicionar Ticket Jira') {
             steps {
                 script {
                     withCredentials([usernamePassword(credentialsId: 'JIRA_TOKEN', usernameVariable: 'JIRA_USER', passwordVariable: 'JIRA_API_TOKEN')]) {
@@ -365,7 +365,7 @@ stage('Validar y Transicionar Ticket Jira') {
             }
         }
 
-stage("descripción Jira"){
+        stage("descripción Jira"){
             steps{
                 script{
 
@@ -412,7 +412,7 @@ stage("descripción Jira"){
             }
         }
 
-     stage('Crear ticket en Jira') {
+        stage('Crear ticket en Jira') {
             when {
                 expression { params.ENVIRONMENT == 'Produccion' }
                 }
@@ -475,8 +475,9 @@ stage("descripción Jira"){
 
   
 
-    post {
-        success { echo 'Pipeline ejecutado correctamente.' }
-        failure { echo 'Error al ejecutar el pipeline.' }
+        post {
+            success { echo 'Pipeline ejecutado correctamente.' }
+            failure { echo 'Error al ejecutar el pipeline.' }
+        }
     }
 }
