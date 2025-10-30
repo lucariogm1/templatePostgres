@@ -293,8 +293,10 @@ stages {
         
                     // Si todo fue correcto, enviar mensaje unificado a Teams
                     def mensajeTeams = """Ticket ${TICKET_JIRA} cambió automáticamente de 'Tareas por hacer' a 'Finalizado (Done)'.
-                    \n\nPipeline completado correctamente.
-                    \n\nInstancia de base de datos creada con los siguientes detalles:"""
+
+Pipeline completado correctamente.
+
+Instancia de base de datos creada con los siguientes detalles:"""
 
         
                     def sectionMessage = """
