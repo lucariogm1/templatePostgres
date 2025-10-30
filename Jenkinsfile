@@ -301,7 +301,7 @@ Instancia de base de datos creada con los siguientes detalles:"""
             def facts = [
                 [ name: "Pais", value: env.PAIS ?: "" ],
                 [ name: "Ambiente", value: params.ENVIRONMENT ?: "" ],
-                [ name: "Base de Datos", value: "${params.DB_ENGINE} (${params.DB_VERSION})".toString() ],
+                [ name: "Base de Datos", value: "${env.DB_ENGINE} (${params.DB_VERSION})".toString() ],
                 [ name: "Proyecto GCP", value: params.PROJECT_ID ?: "" ],
                 [ name: "Nombre de la instancia", value: params.DB_INSTANCE_NAME ?: "" ],
                 [ name: "Región/Zona", value: "${params.REGION}/${params.ZONE}" ],
